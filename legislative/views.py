@@ -4,7 +4,12 @@ from .services import legislative_service
 
 
 def index(request):
-    return render(request, 'index.html')
+    stats = legislative_service.get_stats()
+
+    context = {
+        **stats,
+    }
+    return render(request, 'index.html', context)
 
 
 def bills_view(request):

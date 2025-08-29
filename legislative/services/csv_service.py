@@ -28,12 +28,12 @@ class CSVLegislativeDataService(LegislativeDataServiceInterface):
 
     @property
     @lru_cache(maxsize=1)
-    def votes_results(self):
+    def vote_results(self):
         return pd.read_csv(os.path.join(self.data_folder, 'vote_results.csv'))
 
     @lru_cache(maxsize=1)
     def get_complete_legislators_data(self):
-        complete_data = self.legislators.merge(self.votes_results.merge(self.votes.merge(self.bills, left_on='bill_id', right_on='id', suffixes=('', '_bill')), left_on='vote_id', right_on='id', suffixes=(
+        complete_data = self.legislators.merge(self.vote_results.merge(self.votes.merge(self.bills, left_on='bill_id', right_on='id', suffixes=('', '_bill')), left_on='vote_id', right_on='id', suffixes=(
             '', 'vr')), left_on='id', right_on='legislator_id', suffixes=('', '_votes'))
 
         vote_counts = complete_data.groupby('legislator_id').agg({
@@ -52,8 +52,17 @@ class CSVLegislativeDataService(LegislativeDataServiceInterface):
         })
         return result
 
+    @lru_cache(maxsize=1)
+    def get_stats(self):
+        return {
+            'legislators_count': len(self.legislators),
+            'bills_count': len(self.bills),
+            'votes_count': len(self.vote_results)
+        }
+
+    @lru_cache(maxsize=1)
     def get_complete_bills_data(self):
-        complete_data = self.legislators.merge(self.votes_results.merge(self.votes.merge(self.bills, left_on='bill_id', right_on='id', suffixes=('', '_bill')), left_on='vote_id', right_on='id', suffixes=(
+        complete_data = self.legislators.merge(self.vote_results.merge(self.votes.merge(self.bills, left_on='bill_id', right_on='id', suffixes=('', '_bill')), left_on='vote_id', right_on='id', suffixes=(
             '', '_vr')), left_on='id', right_on='legislator_id', how='left', suffixes=('', '_votes'))
 
         count_votes = complete_data.groupby('bill_id').agg({

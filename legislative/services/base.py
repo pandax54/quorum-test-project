@@ -21,7 +21,11 @@ class LegislativeDataServiceInterface():
 
     @property
     @abstractmethod
-    def votes_results(self):
+    def vote_results(self):
+        pass
+
+    @abstractmethod
+    def get_stats(self):
         pass
 
     @abstractmethod

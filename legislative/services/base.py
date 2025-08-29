@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 
 
 class LegislativeDataServiceInterface():
@@ -22,4 +22,8 @@ class LegislativeDataServiceInterface():
     @property
     @abstractmethod
     def votes_results(self):
+        pass
+
+    @abstractmethod
+    def get_complete_legislators_data(self):
         pass

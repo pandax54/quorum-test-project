@@ -7,3 +7,9 @@ $ docker-compose -f docker-compose.yml up --build
 ```
 
 The container will be accessible at http://localhost:8000 once running
+
+# Creating requirements.txt from pyproject.toml
+
+```
+$ uv pip compile pyproject.toml -o requirements.txt
+```

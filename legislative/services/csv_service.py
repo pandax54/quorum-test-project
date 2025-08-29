@@ -51,3 +51,27 @@ class CSVLegislativeDataService(LegislativeDataServiceInterface):
             'no_votes': vote_counts['no_votes']
         })
         return result
+
+    def get_complete_bills_data(self):
+        complete_data = self.legislators.merge(self.votes_results.merge(self.votes.merge(self.bills, left_on='bill_id', right_on='id', suffixes=('', '_bill')), left_on='vote_id', right_on='id', suffixes=(
+            '', '_vr')), left_on='id', right_on='legislator_id', how='left', suffixes=('', '_votes'))
+
+        count_votes = complete_data.groupby('bill_id').agg({
+            'title': 'first',
+            'name': 'first',
+            'vote_type': ['count', lambda x: (x == 1).sum(), lambda x: (x == 2).sum()]
+        })
+
+        count_votes.columns = ['title', 'name',
+                               'total_votes', 'yes_votes', 'no_votes']
+
+        count_votes = count_votes.reset_index(drop=True)
+
+        result = pd.DataFrame({
+            'Bill': count_votes['title'],
+            'Sponsor': count_votes['name'],
+            'total_votes': count_votes['total_votes'],
+            'yes_votes': count_votes['yes_votes'],
+            'no_votes': count_votes['no_votes']
+        })
+        return result

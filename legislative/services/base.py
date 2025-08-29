@@ -27,3 +27,7 @@ class LegislativeDataServiceInterface():
     @abstractmethod
     def get_complete_legislators_data(self):
         pass
+
+    @abstractmethod
+    def get_complete_bills_data(self):
+        pass

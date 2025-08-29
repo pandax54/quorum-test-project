@@ -44,3 +44,11 @@ class LegislativeDataServiceInterface():
         Works with data from any source (CSV, DB, etc.)
         """
         pass
+
+    @abstractmethod
+    def get_bill_by_id(self):
+        pass
+
+    @abstractmethod
+    def get_legislator_by_id(self):
+        pass

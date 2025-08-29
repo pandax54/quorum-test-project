@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.http import Http404
 from .services import legislative_service
 
 
@@ -34,3 +34,34 @@ def legislators_view(request):
     }
 
     return render(request, 'table.html', context)
+
+
+def bill_detail_view(request, bill_id):
+    bill = legislative_service.get_bill_by_id(int(bill_id))
+
+    if not bill:
+        raise Http404("Bill not found")
+
+    sponsor_link = f'<a href="/legislators/{bill["sponsor_id"]}/" class="legislator-link">{bill["sponsor_name"]}</a>' if bill["sponsor_name"] != "Unknown Sponsor" else bill["sponsor_name"]
+
+    context = {
+        'bill': bill,
+        'sponsor_link': sponsor_link,
+        'view': 'bills'
+    }
+
+    return render(request, 'bill_detail.html', context)
+
+
+def legislator_detail_view(request, legislator_id):
+    legislator = legislative_service.get_legislator_by_id(int(legislator_id))
+
+    if not legislator:
+        raise Http404("Legislator not found")
+
+    context = {
+        'legislator': legislator,
+        'view': 'legislators'
+    }
+
+    return render(request, 'legislator_detail.html', context)

@@ -1,0 +1,40 @@
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+pip-log.txt
+pip-delete-this-directory.txt
+.tox
+.coverage
+.coverage.*
+.pytest_cache
+nosetests.xml
+.cache
+.venv
+.env
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+media
+staticfiles
+
+# Development
+.git
+.gitignore
+README.md
+.DS_Store
+.vscode
+.idea
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# UV cache
+.uv-cache

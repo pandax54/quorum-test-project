@@ -32,7 +32,7 @@ class CSVLegislativeDataService(LegislativeDataServiceInterface):
         return pd.read_csv(os.path.join(self.data_folder, 'vote_results.csv'))
 
     @lru_cache(maxsize=1)
-    def get_complete_legislators_data(self):
+    def get_complete_legislators_data(self) -> pd.DataFrame:
         complete_data = self.legislators.merge(self.vote_results.merge(self.votes.merge(self.bills, left_on='bill_id', right_on='id', suffixes=('', '_bill')), left_on='vote_id', right_on='id', suffixes=(
             '', 'vr')), left_on='id', right_on='legislator_id', suffixes=('', '_votes'))
 
@@ -61,7 +61,7 @@ class CSVLegislativeDataService(LegislativeDataServiceInterface):
         }
 
     @lru_cache(maxsize=1)
-    def get_complete_bills_data(self):
+    def get_complete_bills_data(self) -> pd.DataFrame:
         complete_data = self.legislators.merge(self.vote_results.merge(self.votes.merge(self.bills, left_on='bill_id', right_on='id', suffixes=('', '_bill')), left_on='vote_id', right_on='id', suffixes=(
             '', '_vr')), left_on='id', right_on='legislator_id', how='left', suffixes=('', '_votes'))
 
@@ -84,3 +84,13 @@ class CSVLegislativeDataService(LegislativeDataServiceInterface):
             'no_votes': count_votes['no_votes']
         })
         return result
+
+    def render_table(self, data: pd.DataFrame) -> str:
+        df = pd.DataFrame(data)
+        return df.to_html(
+            classes='table table-striped table-hover',
+            justify='left',
+            escape=False,
+            index=False,
+            border=0
+        )

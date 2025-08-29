@@ -13,16 +13,24 @@ def index(request):
 
 
 def bills_view(request):
-    bills = legislative_service.get_complete_bills_data()
+    bills_data = legislative_service.get_complete_bills_data()
+    bills_table = legislative_service.render_table(bills_data)
 
-    return HttpResponse(bills.to_html(
-        justify='left'
-    ))
+    context = {
+        'table': bills_table,
+        'views': 'bills'
+    }
+
+    return render(request, 'table.html', context)
 
 
 def legislators_view(request):
-    legislators = legislative_service.get_complete_legislators_data()
+    legislators_data = legislative_service.get_complete_legislators_data()
+    legislators_table = legislative_service.render_table(legislators_data)
 
-    return HttpResponse(legislators.to_html(
-        justify='left'
-    ))
+    context = {
+        'table': legislators_table,
+        'views': 'legislators'
+    }
+
+    return render(request, 'table.html', context)

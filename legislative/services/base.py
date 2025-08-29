@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from pandas import DataFrame
 
 
 class LegislativeDataServiceInterface():
@@ -34,4 +35,12 @@ class LegislativeDataServiceInterface():
 
     @abstractmethod
     def get_complete_bills_data(self):
+        pass
+
+    @abstractmethod
+    def render_table(self, data: DataFrame):
+        """
+        Convert structured data to HTML table.
+        Works with data from any source (CSV, DB, etc.)
+        """
         pass

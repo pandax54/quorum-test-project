@@ -6,11 +6,12 @@ from .base import LegislativeDataServiceInterface
 
 
 class CSVLegislativeDataService(LegislativeDataServiceInterface):
-    """CSV-based implementation of legislative data service"""
+    """CSV-based implementation with simple dynamic column support"""
 
     def __init__(self):
         self.data_folder = os.path.join(settings.BASE_DIR, 'data')
 
+    # Data loading properties
     @property
     @lru_cache(maxsize=1)
     def legislators(self):
@@ -31,59 +32,112 @@ class CSVLegislativeDataService(LegislativeDataServiceInterface):
     def vote_results(self):
         return pd.read_csv(os.path.join(self.data_folder, 'vote_results.csv'))
 
-    @property
-    @lru_cache(maxsize=1)
-    def complete_data(self):
-        return self.legislators.merge(self.vote_results.merge(self.votes.merge(self.bills, left_on='bill_id', right_on='id', how='left', suffixes=('', '_bill')), left_on='vote_id', right_on='id', how='left', suffixes=(
-            '', '_vr')), left_on='id', right_on='legislator_id', how='left', suffixes=('', '_votes'))
+    # Helper methods
+    def make_link(self, url_pattern, item_id, text, css_class=""):
+        """Create HTML link"""
+        class_attr = f' class="{css_class}"' if css_class else ""
+        return f'<a href="{url_pattern.format(id=item_id)}"{class_attr}>{text}</a>'
+
+    def format_date(self, date_str):
+        """Format date string"""
+        if pd.isna(date_str) or date_str == "":
+            return "N/A"
+        try:
+            return pd.to_datetime(date_str).strftime('%Y-%m-%d')
+        except (ValueError, TypeError):
+            return str(date_str)
 
     @lru_cache(maxsize=1)
-    def get_complete_legislators_data(self) -> pd.DataFrame:
-        all_legislators = self.legislators.copy()
+    def get_complete_bills_data(self):
 
-        vote_counts = self.complete_data.groupby('legislator_id').agg({
+        vote_counts = (self.vote_results
+                       .merge(self.votes, left_on='vote_id', right_on='id')
+                       .groupby('bill_id')
+                       .agg({'vote_type': ['count', lambda x: (x == 1).sum(), lambda x: (x == 2).sum()]})
+                       .reset_index())
+        vote_counts.columns = ['bill_id',
+                               'total_votes', 'yea_votes', 'nay_votes']
+
+        result = (self.bills
+                  .merge(self.legislators, left_on='sponsor_id', right_on='id',
+                         suffixes=('', '_sponsor'), how='left')
+                  .merge(vote_counts, left_on='id', right_on='bill_id', how='left')
+                  .fillna({'total_votes': 0, 'yea_votes': 0, 'nay_votes': 0, 'name': 'Unknown Sponsor'}))
+
+        # Convert vote counts to int otherwise they will show up as float
+        result[['total_votes', 'yea_votes', 'nay_votes']] = result[[
+            'total_votes', 'yea_votes', 'nay_votes']].astype(int)
+
+        result['title_formatted'] = result.apply(
+            lambda row: self.make_link('/bills/{id}/', row['id'], row['title'], 'bill-link'), axis=1
+        )
+        result['sponsor_formatted'] = result.apply(
+            lambda row: self.make_link(
+                '/legislators/{id}/', row['sponsor_id'], row['name'], 'legislator-link')
+            if row['name'] != 'Unknown Sponsor' else row['name'], axis=1
+        )
+
+        base_output = {
+            'id': result['id'],
+            'title': result['title_formatted'],
+            'sponsor': result['sponsor_formatted'],
+            'total_votes': result['total_votes'],
+            'yea_votes': result['yea_votes'],
+            'nay_votes': result['nay_votes'],
+        }
+
+        return pd.DataFrame(base_output).to_dict('records')
+
+    @lru_cache(maxsize=1)
+    def get_complete_legislators_data(self):
+
+        complete_data = (self.legislators
+                         .merge(self.vote_results
+                                .merge(self.votes
+                                       .merge(self.bills, left_on='bill_id', right_on='id', how='left', suffixes=('', '_bill')),
+                                       left_on='vote_id', right_on='id', how='left', suffixes=('', '_vr')),
+                                left_on='id', right_on='legislator_id', how='left', suffixes=('', '_votes')))
+
+        vote_counts = complete_data.groupby('legislator_id').agg({
             'vote_type': ['count', lambda x: (x == 1).sum(), lambda x: (x == 2).sum()],
-        })
-        vote_counts.columns = ['total_votes', 'yes_votes', 'no_votes']
-        vote_counts = vote_counts.reset_index()
+        }).reset_index()
+        vote_counts.columns = ['legislator_id',
+                               'total_votes', 'yes_votes', 'no_votes']
 
-        bills_sponsored = self.bills.groupby('sponsor_id').size().reset_index()
-        bills_sponsored.columns = ['legislator_id', 'bills_sponsored']
+        bills_sponsored = self.bills.groupby(
+            'sponsor_id').size().reset_index(name='bills_sponsored')
 
-        result_data = all_legislators.merge(
-            vote_counts,
-            left_on='id',
-            right_on='legislator_id',
-            how='left'
+        result = (self.legislators
+                  .merge(vote_counts, left_on='id', right_on='legislator_id', how='left')
+                  .merge(bills_sponsored, left_on='id', right_on='sponsor_id', how='left')
+                  .fillna({'total_votes': 0, 'yes_votes': 0, 'no_votes': 0, 'bills_sponsored': 0}))
+
+        result[['total_votes', 'yes_votes', 'no_votes', 'bills_sponsored']] = result[[
+            'total_votes', 'yes_votes', 'no_votes', 'bills_sponsored']].astype(int)
+
+        result['name_formatted'] = result.apply(
+            lambda row: self.make_link('/legislators/{id}/', row['id'], row['name'], 'legislator-link'), axis=1
         )
 
-        result_data = result_data.merge(
-            bills_sponsored,
-            left_on='id',
-            right_on='legislator_id',
-            how='left'
+        base_output = {
+            'legislator': result['name_formatted'],
+            'total_votes': result['total_votes'],
+            'yes_votes': result['yes_votes'],
+            'no_votes': result['no_votes'],
+            'bills_sponsored': result['bills_sponsored']
+        }
+
+        return pd.DataFrame(base_output)
+
+    def render_table(self, data):
+        """Render DataFrame as HTML table"""
+        return pd.DataFrame(data).to_html(
+            classes='table table-striped table-hover',
+            justify='left',
+            escape=False,
+            index=False,
+            border=0
         )
-
-        # Fill missing values with 0
-        result_data[['total_votes', 'yes_votes', 'no_votes', 'bills_sponsored']] = result_data[
-            ['total_votes', 'yes_votes', 'no_votes', 'bills_sponsored']
-        ].fillna(0).astype(int)
-
-        result_data['name'] = result_data.apply(
-            lambda row: f'<a href="/legislators/{row["id"]}/" class="legislator-link">{row["name"]}</a>'
-            if row["name"] != "Unknown Sponsor" else row["name"],
-            axis=1
-        )
-
-        result = pd.DataFrame({
-            'legislator': result_data['name'],
-            'total_votes': result_data['total_votes'],
-            'yes_votes': result_data['yes_votes'],
-            'no_votes': result_data['no_votes'],
-            'bills_sponsored': result_data['bills_sponsored']
-        })
-
-        return result
 
     @lru_cache(maxsize=1)
     def get_stats(self):
@@ -93,69 +147,10 @@ class CSVLegislativeDataService(LegislativeDataServiceInterface):
             'votes_count': len(self.vote_results)
         }
 
-    @lru_cache(maxsize=1)
-    def get_complete_bills_data(self) -> pd.DataFrame:
-        """
-        Get bills data as structured data (works for both CSV and DB versions).
-        Returns list of dictionaries.
-        """
-        voting_data_for_counts = (self.vote_results
-                                  .merge(self.votes, left_on='vote_id', right_on='id'))
-
-        vote_counts = voting_data_for_counts.groupby('bill_id').agg({
-            'vote_type': ['count', lambda x: (x == 1).sum(), lambda x: (x == 2).sum()]
-        }).reset_index()
-
-        vote_counts.columns = ['bill_id',
-                               'total_votes', 'yea_votes', 'nay_votes']
-
-        complete_data = (self.bills
-                         .merge(self.legislators, left_on='sponsor_id', right_on='id',
-                                suffixes=('', '_sponsor'), how='left')
-                         .merge(vote_counts, left_on='id', right_on='bill_id', how='left')
-                         .fillna({
-                             'total_votes': 0,
-                             'yea_votes': 0,
-                             'nay_votes': 0,
-                             'name': 'Unknown Sponsor'
-                         }))
-
-        complete_data['title'] = complete_data.apply(
-            lambda row: f'<a href="/bills/{row["id"]}/" class="bill-link">{row["title"]}</a>',
-            axis=1
-        )
-        complete_data['name'] = complete_data.apply(
-            lambda row: f'<a href="/legislators/{row["sponsor_id"]}/" class="legislator-link">{row["name"]}</a>'
-            if row["name"] != "Unknown Sponsor" else row["name"],
-            axis=1
-        )
-
-        result = pd.DataFrame({
-            'id': complete_data['id'],
-            'title': complete_data['title'],
-            'sponsor': complete_data['name'],
-            'total_votes': complete_data['total_votes'].astype(int),
-            'yea_votes': complete_data['yea_votes'].astype(int),
-            'nay_votes': complete_data['nay_votes'].astype(int)
-        })
-
-        return result.to_dict('records')
-
-    def render_table(self, data: pd.DataFrame) -> str:
-        df = pd.DataFrame(data)
-        return df.to_html(
-            classes='table table-striped table-hover',
-            justify='left',
-            escape=False,
-            index=False,
-            border=0
-        )
-
     def get_bill_by_id(self, bill_id):
         """
         Returns detailed bill information with sponsor name, vote counts, and voting breakdown.
         """
-
         bill_with_sponsor = self.bills[self.bills['id'] == bill_id].merge(
             self.legislators[['id', 'name']],
             left_on='sponsor_id',
@@ -184,7 +179,8 @@ class CSVLegislativeDataService(LegislativeDataServiceInterface):
                 'total_votes': 0,
                 'supporters': 0,
                 'opposers': 0,
-                'vote_details': []
+                'vote_details': [],
+                **{col: bill_info.get(col, None) for col in self.bills.columns if col not in ['id', 'title', 'sponsor_id']}
             }
 
         vote_id = bill_votes_query.iloc[0]['id']
@@ -210,7 +206,8 @@ class CSVLegislativeDataService(LegislativeDataServiceInterface):
                 'vote_type'] == 1 else '<span class="badge bg-danger">No</span>'
 
             if pd.notna(row['name']):
-                legislator_link = f'<a href="/legislators/{row["legislator_id"]}/" class="legislator-link">{legislator_name}</a>'
+                legislator_link = self.make_link(
+                    '/legislators/{id}/', row['legislator_id'], legislator_name, 'legislator-link')
             else:
                 legislator_link = legislator_name
 
@@ -233,7 +230,8 @@ class CSVLegislativeDataService(LegislativeDataServiceInterface):
             'total_votes': total_votes,
             'supporters': supporters,
             'opposers': opposers,
-            'vote_details': styled_vote_details
+            'vote_details': styled_vote_details,
+            **{col: bill_info.get(col, None) for col in self.bills.columns if col not in ['id', 'title', 'sponsor_id']}
         }
 
     def get_legislator_by_id(self, legislator_id):
@@ -260,7 +258,8 @@ class CSVLegislativeDataService(LegislativeDataServiceInterface):
         for _, row in bills_voted_on.iterrows():
             vote_badge = '<span class="badge bg-success">Yes</span>' if row[
                 'vote_type'] == 1 else '<span class="badge bg-danger">No</span>'
-            bill_link = f'<a href="/bills/{row["bill_id"]}/" class="bill-link">{row["title"]}</a>'
+            bill_link = self.make_link(
+                '/bills/{id}/', row['bill_id'], row['title'], 'bill-link')
 
             bills_voted_details.append({
                 'bill_id': row['bill_id'],
@@ -287,7 +286,8 @@ class CSVLegislativeDataService(LegislativeDataServiceInterface):
             else:
                 bill_supporters = bill_opposers = bill_total = 0
 
-            bill_link = f'<a href="/bills/{bill["id"]}/" class="bill-link">{bill["title"]}</a>'
+            bill_link = self.make_link(
+                '/bills/{id}/', bill['id'], bill['title'], 'bill-link')
 
             sponsored_bills_details.append({
                 'bill_id': bill['id'],
@@ -309,5 +309,6 @@ class CSVLegislativeDataService(LegislativeDataServiceInterface):
             'bills_voted_on_count': len(bills_voted_details),
             'bills_sponsored_count': len(sponsored_bills_details),
             'bills_voted_on_details': bills_voted_details,
-            'sponsored_bills_details': sponsored_bills_details
+            'sponsored_bills_details': sponsored_bills_details,
+            **{col: legislator_info.get(col, None) for col in self.legislators.columns if col not in ['id', 'name']}
         }

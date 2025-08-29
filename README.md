@@ -1,4 +1,4 @@
-# Using Docker Compose:
+# Project setup and Execution:
 
 To build and run the Docker container using Docker Compose, execute the following command in the terminal:
 

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from legislative import views
 
 urlpatterns = [
     path("", views.index, name="index"),
@@ -12,4 +12,7 @@ urlpatterns = [
     ),
     path("bills/", views.bills_view, name="bills"),
     path("bills/<int:bill_id>/", views.bill_detail_view, name="bill_detail"),
+    path('legislator/download/', views.download_legislators_csv,
+         name="download_legislators"),
+    path('bills/download/', views.download_bills_csv, name="download_bills"),
 ]

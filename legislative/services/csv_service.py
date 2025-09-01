@@ -431,3 +431,27 @@ class CSVLegislativeDataService(LegislativeDataServiceInterface):
                 if col not in ["id", "name"]
             },
         }
+
+    def get_legislators_data_for_export(self):
+        """Get legislators data without HTML formatting for CSV export"""
+        legislators_data = self.get_complete_legislators_data()
+        df = pd.DataFrame(legislators_data)
+
+        for col in df.columns:
+            if df[col].dtype == 'object':
+                df[col] = df[col].astype(str).str.replace(
+                    r'<[^>]*>', '', regex=True)
+
+        return df
+
+    def get_bills_data_for_export(self):
+        """Get bills data without HTML formatting for CSV export"""
+        bills_data = self.get_complete_bills_data()
+        df = pd.DataFrame(bills_data)
+
+        for col in df.columns:
+            if df[col].dtype == 'object':
+                df[col] = df[col].astype(str).str.replace(
+                    r'<[^>]*>', '', regex=True)
+
+        return df

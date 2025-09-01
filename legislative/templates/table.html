@@ -28,6 +28,11 @@
           >Legislators</a
         >
       </div>
+      <div class="mb-3">
+        <a href="{% url download_url %}" class="btn btn-success">
+          <i class="fas fa-download"></i> Download CSV
+        </a>
+      </div>
       {{ table|safe }}
     </div>
   </body>

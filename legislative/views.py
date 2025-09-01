@@ -1,5 +1,6 @@
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import render
+from datetime import datetime
 
 from .services import legislative_service
 
@@ -36,7 +37,8 @@ def bills_view(request):
         ],
     )
 
-    context = {"table": bills_table, "views": "bills"}
+    context = {"table": bills_table, "views": "bills",
+               "download_url": "download_bills"}
 
     return render(request, "table.html", context)
 
@@ -56,7 +58,8 @@ def legislators_view(request):
         ],
     )
 
-    context = {"table": legislators_table, "views": "legislators"}
+    context = {"table": legislators_table, "views": "legislators",
+               "download_url": "download_legislators"}
 
     return render(request, "table.html", context)
 
@@ -87,3 +90,32 @@ def legislator_detail_view(request, legislator_id):
     context = {"legislator": legislator, "view": "legislators"}
 
     return render(request, "legislator_detail.html", context)
+
+
+def download_legislators_csv(request):
+    df = legislative_service.get_legislators_data_for_export()
+
+    today = datetime.now().strftime('%Y-%m-%d')
+    filename = f"legislators_data_{today}.csv"
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    # response['Content-Disposition'] = 'attachment; filename="legislators_data.csv"'
+
+    df.to_csv(response, index=False)
+
+    return response
+
+
+def download_bills_csv(request):
+    df = legislative_service.get_bills_data_for_export()
+
+    today = datetime.now().strftime('%Y-%m-%d')
+    filename = f"bills_data_{today}.csv"
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    # response['Content-Disposition'] = 'attachment; filename="bills_data.csv"'
+    df.to_csv(response, index=False)
+
+    return response

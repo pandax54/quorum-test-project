@@ -77,3 +77,13 @@ class LegislativeDataServiceInterface:
     @abstractmethod
     def get_legislator_by_id(self):
         pass
+
+    @abstractmethod
+    def get_legislators_data_for_export(self):
+        """Get legislators data without HTML formatting for CSV export"""
+        pass
+
+    @abstractmethod
+    def get_bills_data_for_export(self):
+        """Get bills data without HTML formatting for CSV export"""
+        pass

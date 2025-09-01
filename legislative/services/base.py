@@ -1,5 +1,6 @@
 from abc import abstractmethod
 from typing import Callable, List, Optional, TypedDict
+
 import pandas as pd
 
 

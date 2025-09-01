@@ -1,9 +1,12 @@
-from typing import List
 import os
 from functools import lru_cache, partial
+from typing import List
+
 import pandas as pd
 from django.conf import settings
-from .base import BillsDataDict, LegislativeDataServiceInterface, LinkableColumnsList
+
+from .base import (BillsDataDict, LegislativeDataServiceInterface,
+                   LinkableColumnsList)
 
 
 class CSVLegislativeDataService(LegislativeDataServiceInterface):

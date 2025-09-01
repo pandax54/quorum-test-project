@@ -8,3 +8,13 @@ dependencies = [
     "django>=5.2.5",
     "pandas>=2.3.2",
 ]
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+    "isort>=6.0.1",
+    "mypy>=1.17.1",
+    "pylint>=3.3.8",
+    "pytest>=8.4.1",
+    "pytest-django>=4.11.1",
+]

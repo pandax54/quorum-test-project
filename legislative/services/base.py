@@ -1,8 +1,30 @@
 from abc import abstractmethod
-from pandas import DataFrame
+from typing import Callable, List, Optional, TypedDict
+import pandas as pd
 
 
-class LegislativeDataServiceInterface():
+class BillsDataDict(TypedDict, total=True):
+    id: int
+    title: str
+    sponsor_id: int
+    sponsor: str
+    total_votes: int
+    yea_votes: int
+    nay_votes: int
+
+
+class LinkableColumnsList(TypedDict, total=False):
+    id: int
+    column_name: str
+    url_pattern: str
+    item_id: str
+    name: str
+    css_class: str
+    """ Function to determine if row should be linked"""
+    should_link: Optional[Callable[[dict], bool]]
+
+
+class LegislativeDataServiceInterface:
     """Abstract interface for legislative data services"""
 
     @property
@@ -34,11 +56,13 @@ class LegislativeDataServiceInterface():
         pass
 
     @abstractmethod
-    def get_complete_bills_data(self):
+    def get_complete_bills_data(self) -> List[BillsDataDict]:
         pass
 
     @abstractmethod
-    def render_table(self, data: DataFrame):
+    def render_table(
+        self, data: pd.DataFrame, linkable_list: Optional[List[LinkableColumnsList]]
+    ) -> pd.DataFrame:
         """
         Convert structured data to HTML table.
         Works with data from any source (CSV, DB, etc.)

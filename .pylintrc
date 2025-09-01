@@ -1,0 +1,14 @@
+[MESSAGES CONTROL]
+
+disable=
+    missing-docstring,          
+    too-few-public-methods,     
+    line-too-long,              
+    import-error,               
+
+[FORMAT]
+max-line-length = 88            
+
+[DESIGN]
+max-args = 7                    
+max-locals = 20                
